@@ -1,0 +1,25 @@
+{
+  "manifest_version": 3,
+  "name": "Tech Blog Saver",
+  "version": "0.1.0",
+  "description": "現在のページを Notion に保存し、未読を Slack でリマインドするブラウザ拡張",
+  "action": {
+    "default_title": "Tech Blog Saver",
+    "default_popup": "popup/index.html"
+  },
+  "options_ui": {
+    "page": "options/index.html",
+    "open_in_tab": true
+  },
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "permissions": ["activeTab", "storage", "clipboardWrite", "tabs"],
+  "host_permissions": ["<all_urls>"],
+  "icons": {
+    "16": "icons/icon-16.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  }
+}
