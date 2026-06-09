@@ -1,0 +1,46 @@
+# Node
+node_modules/
+.pnpm-store/
+.npm/
+
+# Next.js
+.next/
+out/
+.vercel/
+
+# Build outputs
+frontend/extension-dist/
+dist/
+build/
+
+# Env
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.vscode/
+.idea/
+*.swp
+
+# Go
+backend/bin/
+backend/tmp/
+backend/server
+*.exe
+*.test
+*.out
+
+# Misc
+~/

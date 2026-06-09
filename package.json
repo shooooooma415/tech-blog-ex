@@ -1,0 +1,18 @@
+{
+  "name": "tech-blog-ex",
+  "version": "0.1.0",
+  "private": true,
+  "description": "技術ブログ収集用ブラウザ拡張 (Next.js + Go/Gin) monorepo",
+  "scripts": {
+    "dev": "pnpm --filter frontend dev",
+    "build": "pnpm --filter frontend build",
+    "build:extension": "pnpm --filter frontend build:extension",
+    "lint": "pnpm --filter frontend lint",
+    "backend:dev": "cd backend && go run ./cmd/server",
+    "backend:tidy": "cd backend && go mod tidy"
+  },
+  "packageManager": "pnpm@9.12.0",
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
