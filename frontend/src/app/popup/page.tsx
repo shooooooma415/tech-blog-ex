@@ -13,6 +13,7 @@ import { useSaveArticle } from "@/hooks/useSaveArticle";
 import { useSettings } from "@/hooks/useSettings";
 import { useToast } from "@/hooks/useToast";
 import { openOptionsPage } from "@/lib/openOptionsPage";
+import { saveSettings } from "@/lib/storage";
 
 const AUTO_CLOSE_DELAY_MS = 900;
 
@@ -38,14 +39,16 @@ export default function PopupPage() {
       show("error", result.error);
       return;
     }
-    // auto モードで backend が新規 DB を作ったら ID をキャッシュ
+    // auto モードで backend が使った DB の ID をキャッシュ (新規作成/既存どちらも)。
+    // 次回以降の保存で同じ DB を使い回すため chrome.storage に永続化する。
     if (
       settings.notionMode !== "manual" &&
-      result.databaseCreated &&
       result.databaseId &&
       result.databaseId !== settings.notionDatabaseId
     ) {
-      setSettings({ ...settings, notionDatabaseId: result.databaseId });
+      const next = { ...settings, notionDatabaseId: result.databaseId };
+      setSettings(next);
+      await saveSettings(next);
     }
     show("success", result.message);
     setTimeout(() => {
@@ -63,10 +66,6 @@ export default function PopupPage() {
         saving={saving}
         onClick={handleSave}
       />
-      <p className="text-[10px] text-gray-400 leading-snug">
-        backend 未接続のため mock 実装で動作しています。 backend 実装後は{" "}
-        <code>src/lib/api.ts</code> を差し替えてください。
-      </p>
       <Toast toast={toast} onDismiss={dismiss} />
     </main>
   );

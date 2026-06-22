@@ -22,6 +22,8 @@ export type AppSettings = {
 export type SaveArticleRequest = {
   url: string;
   title: string;
+  // Notion API キー。 サーバは保持せずリクエストごとに受け取る。
+  notionApiKey: string;
   // backend が DB を作る/特定するための情報
   parentPageId: string;
   databaseId?: string; // 既に作成済みならこの DB を使う
