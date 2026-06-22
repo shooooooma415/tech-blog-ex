@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { saveArticleMock } from "@/lib/api";
+import { saveArticle } from "@/lib/api";
 import { copyToClipboard } from "@/lib/activeTab";
 import { appendSavedLog } from "@/lib/storage";
 import type { AppSettings } from "@/lib/types";
@@ -19,7 +19,7 @@ export type UseSaveArticleResult = {
 };
 
 /**
- * popup の保存処理 (リンクコピー → mock API → ローカル履歴追記) をまとめた hook。
+ * popup の保存処理 (リンクコピー → backend API → ローカル履歴追記) をまとめた hook。
  *
  * 呼び出し側は結果を受け取って toast 表示 / popup close / databaseId キャッシュを
  * 行う。 hook 側ではそれらの "副作用" には踏み込まない。
@@ -33,9 +33,10 @@ export function useSaveArticle(): UseSaveArticleResult {
       try {
         const copied = await copyToClipboard(tab.url);
         const isManual = settings.notionMode === "manual";
-        const result = await saveArticleMock({
+        const result = await saveArticle({
           url: tab.url,
           title: tab.title,
+          notionApiKey: settings.notionApiKey.trim(),
           parentPageId: isManual ? "" : settings.notionParentPageId.trim(),
           databaseId: settings.notionDatabaseId.trim() || undefined,
         });

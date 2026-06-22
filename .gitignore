@@ -7,6 +7,7 @@ node_modules/
 .next/
 out/
 .vercel/
+*.tsbuildinfo
 
 # Build outputs
 frontend/extension-dist/
