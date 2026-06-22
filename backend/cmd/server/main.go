@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -106,7 +107,8 @@ func saveArticle(c *gin.Context) {
 	}
 
 	// --- 記事ページを作成する ---
-	page, err := createNotionArticlePage(req.NotionAPIKey, databaseID, req.URL, req.Title)
+	// 作りたての DB は反映に数百ms かかることがあるため、新規作成時はリトライする。
+	page, err := createNotionArticlePage(req.NotionAPIKey, databaseID, req.URL, req.Title, databaseCreated)
 	if err != nil {
 		c.JSON(http.StatusBadGateway, gin.H{"error": "Notion への保存に失敗しました: " + err.Error()})
 		return
@@ -206,7 +208,10 @@ type notionPage struct {
 
 // createNotionArticlePage は DB に記事ページ (Title/URL/Read=false) を作成する。
 // Created は created_time プロパティのため Notion 側で自動設定される。
-func createNotionArticlePage(apiKey, databaseID, url, title string) (*notionPage, error) {
+//
+// retryOnNotFound が true のときは、DB がまだ反映されていない (object_not_found)
+// 場合に短い間隔で数回リトライする。 DB を新規作成した直後に使う。
+func createNotionArticlePage(apiKey, databaseID, url, title string, retryOnNotFound bool) (*notionPage, error) {
 	body := map[string]any{
 		"parent": map[string]any{"database_id": databaseID},
 		"properties": map[string]any{
@@ -224,10 +229,27 @@ func createNotionArticlePage(apiKey, databaseID, url, title string) (*notionPage
 		ID          string `json:"id"`
 		CreatedTime string `json:"created_time"`
 	}
-	if err := notionRequest(apiKey, http.MethodPost, "/pages", body, &out); err != nil {
-		return nil, err
+
+	maxAttempts := 1
+	if retryOnNotFound {
+		maxAttempts = 4
 	}
-	return &notionPage{ID: out.ID, CreatedTime: out.CreatedTime}, nil
+
+	var lastErr error
+	for attempt := 0; attempt < maxAttempts; attempt++ {
+		if attempt > 0 {
+			time.Sleep(time.Duration(attempt) * 500 * time.Millisecond)
+		}
+		lastErr = notionRequest(apiKey, http.MethodPost, "/pages", body, &out)
+		if lastErr == nil {
+			return &notionPage{ID: out.ID, CreatedTime: out.CreatedTime}, nil
+		}
+		// 反映遅延 (object_not_found) 以外のエラーは即座に返す
+		if !strings.Contains(lastErr.Error(), "object_not_found") {
+			break
+		}
+	}
+	return nil, lastErr
 }
 
 // ----------------------------------------------------------------------------
