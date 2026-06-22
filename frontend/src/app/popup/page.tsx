@@ -39,11 +39,10 @@ export default function PopupPage() {
       show("error", result.error);
       return;
     }
-    // auto モードで backend が新規 DB を作ったら ID をキャッシュ。
+    // auto モードで backend が使った DB の ID をキャッシュ (新規作成/既存どちらも)。
     // 次回以降の保存で同じ DB を使い回すため chrome.storage に永続化する。
     if (
       settings.notionMode !== "manual" &&
-      result.databaseCreated &&
       result.databaseId &&
       result.databaseId !== settings.notionDatabaseId
     ) {

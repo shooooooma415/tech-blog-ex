@@ -93,17 +93,29 @@ func saveArticle(c *gin.Context) {
 		return
 	}
 
-	// --- DB を用意する (無ければ新規作成) ---
+	// --- DB を用意する ---
+	// databaseId が渡されればそれを使う。 無ければまず親ページ配下に
+	// 既存の DB が無いか探し、 あれば使い回す (拡張側のキャッシュが失われても
+	// 重複作成しないため)。 それも無ければ新規作成する。
 	databaseID := req.DatabaseID
 	databaseCreated := false
 	if databaseID == "" {
-		created, err := createNotionDatabase(req.NotionAPIKey, req.ParentPageID, defaultDatabaseTitle)
+		existing, err := findExistingDatabase(req.NotionAPIKey, req.ParentPageID, defaultDatabaseTitle)
 		if err != nil {
-			c.JSON(http.StatusBadGateway, gin.H{"error": "Notion DB の作成に失敗しました: " + err.Error()})
+			c.JSON(http.StatusBadGateway, gin.H{"error": "Notion ページの参照に失敗しました: " + err.Error()})
 			return
 		}
-		databaseID = created
-		databaseCreated = true
+		if existing != "" {
+			databaseID = existing
+		} else {
+			created, err := createNotionDatabase(req.NotionAPIKey, req.ParentPageID, defaultDatabaseTitle)
+			if err != nil {
+				c.JSON(http.StatusBadGateway, gin.H{"error": "Notion DB の作成に失敗しました: " + err.Error()})
+				return
+			}
+			databaseID = created
+			databaseCreated = true
+		}
 	}
 
 	// --- 記事ページを作成する ---
@@ -198,6 +210,46 @@ func createNotionDatabase(apiKey, parentPageID, title string) (string, error) {
 		return "", err
 	}
 	return out.ID, nil
+}
+
+// findExistingDatabase は親ページ直下から、指定タイトルの DB (child_database)
+// を探してその ID を返す。 見つからなければ空文字を返す。
+// child_database ブロックの ID はそのまま database_id として使える。
+func findExistingDatabase(apiKey, parentPageID, title string) (string, error) {
+	cursor := ""
+	for {
+		path := "/blocks/" + parentPageID + "/children?page_size=100"
+		if cursor != "" {
+			path += "&start_cursor=" + cursor
+		}
+
+		var out struct {
+			Results []struct {
+				ID            string `json:"id"`
+				Type          string `json:"type"`
+				ChildDatabase *struct {
+					Title string `json:"title"`
+				} `json:"child_database"`
+			} `json:"results"`
+			HasMore    bool   `json:"has_more"`
+			NextCursor string `json:"next_cursor"`
+		}
+		if err := notionRequest(apiKey, http.MethodGet, path, nil, &out); err != nil {
+			return "", err
+		}
+
+		for _, b := range out.Results {
+			if b.Type == "child_database" && b.ChildDatabase != nil && b.ChildDatabase.Title == title {
+				return b.ID, nil
+			}
+		}
+
+		if !out.HasMore || out.NextCursor == "" {
+			break
+		}
+		cursor = out.NextCursor
+	}
+	return "", nil
 }
 
 // notionPage は作成したページの結果。
